@@ -53,7 +53,7 @@
     clip range from pos a (included) with line len (a+len excluded) agains c (included) to d (excluded)
   Assumptions:
     len > 0
-    c <= d		(this is not checked)
+    c <= d		(empty [c,d) has no intersection; see #2809)
   will return 0 if there is no intersection and if a > b
 
 */
@@ -70,13 +70,19 @@ static uint8_t u8g2_clip_intersection2(u8g2_uint_t *ap, u8g2_uint_t *len, u8g2_u
       clip range from a (included) to b (excluded) agains c (included) to d (excluded)
     Assumptions:
       a <= b		(violation is checked and handled correctly)
-      c <= d		(this is not checked)
+      c <= d		(empty [c,d) has no intersection; see #2809)
     will return 0 if there is no intersection and if a > b
 
     optimized clipping: c is set to 0 --> 27 Oct 2018: again removed the c==0 assumption
     
     replaced by uint8_t u8g2_clip_intersection2
   */
+
+  /* Empty clip window (c == d, or c > d) must not report an intersection.
+     Returning 1 with *len == 0 made ll_hvline's do-while underflow and
+     write past the frame buffer (issue #2809). */
+  if ( c >= d )
+    return 0;
 
   /* handle the a>b case correctly. If code and time is critical, this could */
   /* be removed completly (be aware about memory curruption for wrong */
@@ -112,6 +118,8 @@ static uint8_t u8g2_clip_intersection2(u8g2_uint_t *ap, u8g2_uint_t *len, u8g2_u
   *ap = a;
   b -= a;
   *len = b;
+  if ( b == 0 )
+    return 0;
   return 1;
 }
 
